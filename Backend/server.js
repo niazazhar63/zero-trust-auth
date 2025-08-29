@@ -2,6 +2,7 @@ import express from 'express'
 import "dotenv/config"
 import cors from 'cors'
 import connectDB from './config/db.js';
+import adminRouter from './routes/adminRoute.js';
 
 const app = express()
 
@@ -15,6 +16,9 @@ await connectDB();
 app.get("/", (req, res)=>{
     res.send("api is working")
 })
+
+
+app.use("/api/admin", adminRouter)
 
 
 const PORT = process.env.PORT || 3000;
