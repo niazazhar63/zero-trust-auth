@@ -1,4 +1,7 @@
 import React, { useState } from "react";
+import axios from "axios";
+
+const API_URL = import.meta.env.VITE_BACKEND_URL;
 
 const RequestForm = () => {
   const [formData, setFormData] = useState({
@@ -8,22 +11,51 @@ const RequestForm = () => {
     age: "",
   });
 
+  const [loading, setLoading] = useState(false);
+  const [message, setMessage] = useState("");
+
   const handleChange = (e) => {
     const { name, value } = e.target;
     setFormData((prev) => ({ ...prev, [name]: value }));
   };
 
-  const handleSubmit = (e) => {
+  const handleSubmit = async (e) => {
     e.preventDefault();
-    console.log("Form Data:", formData);
-    // You can send formData to your backend here
+    setLoading(true);
+    setMessage("");
+
+    try {
+      const res = await axios.post(
+        `${API_URL}/api/request/request-access`,
+        formData
+      );
+      console.log(res);
+      if (res.data.success) {
+        setMessage(
+          "✅ Request submitted successfully! You Will get an Email if we Approve"
+        );
+        setFormData({ name: "", email: "", role: "employee", age: "" });
+      } else {
+        setMessage(`⚠️ ${res.data.message}`);
+      }
+    } catch (error) {
+      console.error(error);
+      setMessage("❌ Something went wrong. Please try again.");
+    } finally {
+      setLoading(false);
+    }
   };
 
   return (
-    <form onSubmit={handleSubmit} className="border-gray-300 rounded-xl border p-6 flex mx-auto flex-col gap-4 max-w-md">
+    <form
+      onSubmit={handleSubmit}
+      className="border-gray-300 rounded-xl border p-6 flex mx-auto flex-col gap-4 max-w-md"
+    >
       {/* Name */}
       <div className="flex flex-col">
-        <label htmlFor="name" className="font-medium">Name:</label>
+        <label htmlFor="name" className="font-medium">
+          Name:
+        </label>
         <input
           type="text"
           name="name"
@@ -32,12 +64,15 @@ const RequestForm = () => {
           onChange={handleChange}
           placeholder="Enter your name"
           className="border-gray-300 border p-2 rounded"
+          required
         />
       </div>
 
       {/* Email */}
       <div className="flex flex-col">
-        <label htmlFor="email" className="font-medium">Email:</label>
+        <label htmlFor="email" className="font-medium">
+          Email:
+        </label>
         <input
           type="email"
           name="email"
@@ -46,12 +81,15 @@ const RequestForm = () => {
           onChange={handleChange}
           placeholder="Enter your email"
           className="border-gray-300 border p-2 rounded"
+          required
         />
       </div>
 
       {/* Role */}
       <div className="flex flex-col">
-        <label htmlFor="role" className="font-medium">Role:</label>
+        <label htmlFor="role" className="font-medium">
+          Role:
+        </label>
         <select
           name="role"
           id="role"
@@ -60,14 +98,16 @@ const RequestForm = () => {
           className="border-gray-300 border p-2 rounded"
         >
           <option value="employee">Employee</option>
-          <option value="worker">Co-Worker</option>
-          <option value="admin">Intern</option>
+          <option value="co-worker">Co-Worker</option>
+          <option value="intern">Intern</option>
         </select>
       </div>
 
       {/* Age */}
       <div className="flex flex-col">
-        <label htmlFor="age" className="font-medium">Age:</label>
+        <label htmlFor="age" className="font-medium">
+          Age:
+        </label>
         <input
           type="number"
           name="age"
@@ -82,10 +122,15 @@ const RequestForm = () => {
       {/* Submit */}
       <button
         type="submit"
-        className="bg-[#A3DC9A] hover:bg-[#8CC983] text-white p-2 rounded transition"
+        className="bg-[#A3DC9A] hover:bg-[#8CC983] text-white p-2 rounded transition cursor-pointer"
+        disabled={loading}
       >
-        Submit
+        {loading ? "Submitting..." : "Request"}
       </button>
+
+      {message && (
+        <p className="mt-4 text-center text-sm text-gray-700">{message}</p>
+      )}
     </form>
   );
 };

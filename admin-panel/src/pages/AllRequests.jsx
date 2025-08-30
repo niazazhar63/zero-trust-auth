@@ -66,8 +66,8 @@ const AllRequests = ({token}) => {
               className="p-4 bg-gray-100 rounded shadow-sm flex justify-between"
             >
               <div>
-                <h2 className="font-semibold">{req.name}</h2>
-                <p className="text-sm">{req.email}</p>
+                <h2 className="font-semibold">Name: {req.name}</h2>
+                <p className="text-sm">Email: {req.email}</p>
                 <p className="text-sm">Role: {req.role}</p>
                 <p className="text-sm">Age: {req.age}</p>
               </div>
