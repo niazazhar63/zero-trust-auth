@@ -33,7 +33,7 @@ function App() {
             <Sidebar />
             <div className="w-[70%] mx-auto ml-[max(5vw, 25px)] my-8 text-gray-600 text-base">
               <Routes>
-                <Route path="/allRequests" element={<AllRequests />}></Route>
+                <Route path="/allRequests" element={<AllRequests token={token} />}></Route>
                 <Route path="/addEmail" element={<Add />}></Route>
                 <Route path="/allUsers" element={<AllAccount />}></Route>
               </Routes>
