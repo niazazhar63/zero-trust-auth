@@ -6,6 +6,7 @@ const backendUrl = import.meta.env.VITE_BACKEND_URL || "http://localhost:3000";
 
 const AllRequests = ({ token }) => {
   const [activeTab, setActiveTab] = useState("pending");
+  const [rejecting, setRejecting] = useState(null);
   const [approving, setApproving] = useState(null);
   const [requests, setRequests] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -58,6 +59,35 @@ const AllRequests = ({ token }) => {
       toast.error(error.message);
     } finally {
       setApproving(null); // stop loading
+    }
+  };
+
+  const handleReject = async (id) => {
+    setRejecting(id); // show loading for this ID
+    try {
+      const res = await axios.put(
+        `${backendUrl}/api/request/reject/${id}`,
+        {},
+        {
+          headers: {
+            Authorization: `Bearer ${token}`,
+          },
+        }
+      );
+
+      if (res.data.success) {
+        toast.success("User Rejected and email sent");
+        setRequests((prev) =>
+          prev.map((req) =>
+            req._id === id ? { ...req, status: "rejected" } : req
+          )
+        );
+      }
+    } catch (error) {
+      console.error("reject err", error);
+      toast.error(error.message);
+    } finally {
+      setRejecting(null); // stop loading
     }
   };
 
@@ -141,9 +171,42 @@ const AllRequests = ({ token }) => {
                         "Approve"
                       )}
                     </button>
-
-                    <button className="px-3 py-1 bg-red-500 text-white rounded">
-                      Reject
+                    <button
+                      onClick={() => handleReject(req._id)}
+                      disabled={rejecting === req._id}
+                      className={`px-3 py-1 rounded text-white ${
+                        rejecting === req._id
+                          ? "bg-gray-400 cursor-not-allowed"
+                          : "bg-red-500"
+                      }`}
+                    >
+                      {rejecting === req._id ? (
+                        <span className="flex items-center gap-2">
+                          <svg
+                            className="animate-spin h-4 w-4 text-white"
+                            xmlns="http://www.w3.org/2000/svg"
+                            fill="none"
+                            viewBox="0 0 24 24"
+                          >
+                            <circle
+                              className="opacity-25"
+                              cx="12"
+                              cy="12"
+                              r="10"
+                              stroke="currentColor"
+                              strokeWidth="4"
+                            ></circle>
+                            <path
+                              className="opacity-75"
+                              fill="currentColor"
+                              d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z"
+                            ></path>
+                          </svg>
+                          Rejecting...
+                        </span>
+                      ) : (
+                        "Reject"
+                      )}
                     </button>
                   </>
                 )}
