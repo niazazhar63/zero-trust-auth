@@ -10,7 +10,7 @@ export const sendPasswordSetEmail = async ({ to, name, resetLink }) => {
       port: parseInt(process.env.SMTP_PORT), // 587
       secure: false,                     // true for 465
       auth: {
-        user: process.env.SMTP_USER,     // তোমার Gmail
+        user: process.env.SMTP_USER,     // my8 Gmail
         pass: process.env.SMTP_PASS,     // Gmail App Password
       },
     });

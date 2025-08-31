@@ -8,6 +8,9 @@ import { sendPasswordSetEmail } from "../utils/emailService.js";
  * @param {string} param0.displayName - User display name
  * @returns {Object} uid and resetLink
  */
+
+
+
 export const provisionUserAndEmail = async ({ email, displayName }) => {
   try {
     // 1️⃣ Validate email
