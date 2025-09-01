@@ -1,7 +1,7 @@
 import React from 'react'
 import Form from '../components/Form'
 
-const Add = () => {
+const Add = ({token}) => {
   return (
     <div>
       <h1 className="text-2xl font-bold mb-4"> Add Manually</h1>
@@ -11,7 +11,7 @@ const Add = () => {
 
             <div className="my-7 p-3">
                 
-                <Form />
+                <Form token={token} />
             </div>
 
         </div>
