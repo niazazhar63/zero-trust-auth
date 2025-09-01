@@ -119,8 +119,16 @@ export const getAllUsers = async (req, res) => {
 };
 
 export const deleteUser = async (req, res) => {
+  const {email} = req.params
+
   try {
-    await firebaseAuth.deleteUser(req.params.uid);
+    const userRecord = await firebaseAuth.getUserByEmail(email)
+    await firebaseAuth.deleteUser(userRecord.uid)
+
+
+    await Request.findOneAndDelete({email})
+
+
     res.json({ message: "User deleted successfully" });
   } catch (error) {
     res.status(500).json({ error: error.message });

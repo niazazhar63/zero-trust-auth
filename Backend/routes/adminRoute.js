@@ -7,6 +7,6 @@ const adminRouter = express.Router();
 adminRouter.post("/login", adminLogin);
 adminRouter.post("/create-user",auth, adminCreateUser);
 adminRouter.get("/getAllUsers",auth, getAllUsers);
-adminRouter.delete("/deleteUser/:uid",auth, deleteUser);
+adminRouter.delete("/deleteUser/:email",auth, deleteUser);
 
 export default adminRouter;

@@ -25,15 +25,15 @@ const AllAccount = ({ token }) => {
   };
 
   // Delete user by UID
-  const deleteUser = async (uid) => {
+  const deleteUser = async (email) => {
     if (!confirm("Are you sure you want to delete this user?")) return;
     try {
-      await axios.delete(`${backendUrl}/api/admin/deleteUser/${uid}`, {
+      await axios.delete(`${backendUrl}/api/admin/deleteUser/${email}`, {
         headers: {
           Authorization: `Bearer ${token}`,
         },
       });
-      setUsers((prev) => prev.filter((user) => user.uid !== uid));
+      setUsers((prev) => prev.filter((user) => user.email !== email));
     } catch (err) {
       console.error("Error deleting user:", err);
     }
@@ -82,7 +82,7 @@ const AllAccount = ({ token }) => {
                 </td>
                 <td style={{ border: "1px solid #ccc", padding: "8px" }}>
                   <button
-                    onClick={() => deleteUser(user.uid)}
+                    onClick={() => deleteUser(user.email)}
                     style={{
                       backgroundColor: "red",
                       color: "white",
