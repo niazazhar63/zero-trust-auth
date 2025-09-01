@@ -1,6 +1,7 @@
 import jwt from "jsonwebtoken";
 import Request from "../models/requestModel.js";
 import { provisionUserAndEmail } from "../services/provisionService.js";
+import { firebaseAuth } from "../config/firebase.js";
 
 const adminLogin = async (req, res) => {
   try {
@@ -70,7 +71,59 @@ export const adminCreateUser = async (req, res) => {
 
     return res
       .status(500)
-      .json({ success: false, message: error.message || "Internal Server Error" });
+      .json({
+        success: false,
+        message: error.message || "Internal Server Error",
+      });
+  }
+};
+
+export const getAllUsers = async (req, res) => {
+  try {
+    const listAllUsers = async (nextPageToken) => {
+      return await firebaseAuth.listUsers(100, nextPageToken);
+    };
+
+    let users = [];
+    let result = await listAllUsers();
+
+    // প্রথম ব্যাচ যোগ করা
+    users = users.concat(result.users);
+
+    // যদি পরবর্তী পেজ থাকে, সব লুপ করে নিয়ে আসা
+    while (result.pageToken) {
+      result = await listAllUsers(result.pageToken);
+      users = users.concat(result.users);
+    }
+
+    // রেসপন্স পাঠানো
+    res.status(200).json({
+      success: true,
+      count: users.length,
+      users: users.map((u) => ({
+        uid: u.uid,
+        email: u.email,
+        displayName: u.displayName,
+        disabled: u.disabled,
+        metadata: u.metadata,
+        customClaims: u.customClaims || {},
+      })),
+    });
+  } catch (error) {
+    console.error("get users error:", error);
+    res.status(500).json({
+      success: false,
+      message: error.message,
+    });
+  }
+};
+
+export const deleteUser = async (req, res) => {
+  try {
+    await firebaseAuth.deleteUser(req.params.uid);
+    res.json({ message: "User deleted successfully" });
+  } catch (error) {
+    res.status(500).json({ error: error.message });
   }
 };
 
