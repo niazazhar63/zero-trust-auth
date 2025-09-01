@@ -1,14 +1,16 @@
 import admin from "firebase-admin";
 import dotenv from "dotenv";
-import fs from "fs";
+
 dotenv.config();
 
-const serviceAccount = JSON.parse(
-  fs.readFileSync(new URL("../firebase/zero-trust-auth-cc714-firebase-adminsdk-fbsvc-684f8cad30.json", import.meta.url))
-);
-
-admin.initializeApp({
-  credential: admin.credential.cert(serviceAccount),
-});
+if (!admin.apps.length) {
+  admin.initializeApp({
+    credential: admin.credential.cert({
+      projectId: process.env.FIREBASE_PROJECT_ID,
+      clientEmail: process.env.FIREBASE_CLIENT_EMAIL,
+      privateKey: process.env.FIREBASE_PRIVATE_KEY.replace(/\\n/g, '\n'),
+    }),
+  });
+}
 
 export const firebaseAuth = admin.auth();
