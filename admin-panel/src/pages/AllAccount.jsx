@@ -47,7 +47,7 @@ const AllAccount = ({ token }) => {
 
   return (
     <div style={{ padding: "20px" }}>
-      <h2>All Accounts</h2>
+      <h2 className="text-2xl font-bold mb-4">All Accounts</h2>
       {loading ? (
         <p>Loading...</p>
       ) : users.length === 0 ? (
