@@ -13,7 +13,7 @@ export const sendOtp = async (req, res) => {
 
     // Generate 6-digit OTP
     const otp = Math.floor(100000 + Math.random() * 900000).toString();
-    console.log("📩 Generated OTP:", otp);it 
+    console.log("📩 Generated OTP:", otp);
 
     // Hash OTP and save to DB
     const hashedOtp = crypto.createHash("sha256").update(otp).digest("hex");

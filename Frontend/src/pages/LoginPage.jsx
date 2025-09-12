@@ -1,6 +1,7 @@
 import { useContext, useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import { AuthContext } from "../context/AuthProvider";
+import toast from "react-hot-toast";
 
 export default function LoginPage() {
   const { loginUser, sendOtp, verifyOtp } = useContext(AuthContext);
@@ -16,14 +17,20 @@ export default function LoginPage() {
   const handleSubmit = async (e) => {
     e.preventDefault();
     setLoading(true);
+
+    const startTime = performance.now(); // Start time for step 1
     try {
       await loginUser(email, password); // Only credential check
       await sendOtp(email); // Send OTP from backend
+
+      const endTime = performance.now(); // End time for step 1
+      console.log("Step 1 (Login+Send OTP) Latency:", (endTime - startTime).toFixed(2), "ms");
+
       setStep("otp");
-      alert("OTP sent to your email!");
+      toast.success("OTP sent to your email!");
     } catch (err) {
       console.error(err);
-      alert("Login failed: " + err.message);
+      toast.error("Login failed: " + err.message);
     } finally {
       setLoading(false);
     }
@@ -33,17 +40,23 @@ export default function LoginPage() {
   const handleOtpVerify = async (e) => {
     e.preventDefault();
     setLoading(true);
+
+    const startTime = performance.now(); // Start time for step 2
     try {
       const res = await verifyOtp(email, otp);
       if (res.success) {
-        alert("✅ Login successful!");
+        await loginUser(email, password); // Firebase login after OTP verify
+        const endTime = performance.now(); // End time for step 2
+        console.log("Step 2 (OTP Verify + Firebase Login) Latency:", (endTime - startTime).toFixed(2), "ms");
+
+        toast.success("✅ Login successful!");
         navigate("/"); // Redirect after OTP verified
       } else {
-        alert("❌ " + res.message);
+        toast.error("❌ " + res.message);
       }
     } catch (err) {
       console.error(err);
-      alert("OTP verification failed");
+      toast.error("OTP verification failed");
     } finally {
       setLoading(false);
     }
