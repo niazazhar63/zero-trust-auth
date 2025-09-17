@@ -24,7 +24,9 @@ export default function LoginPage() {
       await sendOtp(email); // Send OTP from backend
 
       const endTime = performance.now(); // End time for step 1
-      console.log("Step 1 (Login+Send OTP) Latency:", (endTime - startTime).toFixed(2), "ms");
+      toast.success(
+        `Step 1 (Login+Send OTP) Latency: ${(endTime - startTime).toFixed(2)} ms`, {duration: 8000}
+      );
 
       setStep("otp");
       toast.success("OTP sent to your email!");
@@ -46,8 +48,11 @@ export default function LoginPage() {
       const res = await verifyOtp(email, otp);
       if (res.success) {
         await loginUser(email, password); // Firebase login after OTP verify
+
         const endTime = performance.now(); // End time for step 2
-        console.log("Step 2 (OTP Verify + Firebase Login) Latency:", (endTime - startTime).toFixed(2), "ms");
+        toast.success(
+          `Step 2 (OTP Verify + Firebase Login) Latency: ${(endTime - startTime).toFixed(2)} ms`, {duration: 8000}
+        );
 
         toast.success("✅ Login successful!");
         navigate("/"); // Redirect after OTP verified
@@ -70,7 +75,9 @@ export default function LoginPage() {
             <h2 className="text-2xl font-bold text-center mb-6">Login</h2>
             <form onSubmit={handleSubmit} className="space-y-4">
               <div>
-                <label className="block text-sm font-medium text-gray-700">Email</label>
+                <label className="block text-sm font-medium text-gray-700">
+                  Email
+                </label>
                 <input
                   type="email"
                   placeholder="Enter your email"
@@ -81,7 +88,9 @@ export default function LoginPage() {
                 />
               </div>
               <div>
-                <label className="block text-sm font-medium text-gray-700">Password</label>
+                <label className="block text-sm font-medium text-gray-700">
+                  Password
+                </label>
                 <input
                   type="password"
                   placeholder="Enter your password"
