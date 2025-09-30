@@ -38,34 +38,42 @@ export default function LoginPage() {
     }
   };
 
-  // Step 2: Verify OTP
-  const handleOtpVerify = async (e) => {
-    e.preventDefault();
-    setLoading(true);
+  // Step 2: Verify OTP + then Login
+const handleOtpVerify = async (e) => {
+  e.preventDefault();
+  setLoading(true);
 
-    const startTime = performance.now(); // Start time for step 2
-    try {
-      const res = await verifyOtp(email, otp);
-      if (res.success) {
-        await loginUser(email, password); // Firebase login after OTP verify
+  try {
+    // --- Measure OTP verification only ---
+    const otpStart = performance.now();
+    const res = await verifyOtp(email, otp);
+    const otpEnd = performance.now();
+    const otpTime = (otpEnd - otpStart).toFixed(2);
 
-        const endTime = performance.now(); // End time for step 2
-        toast.success(
-          `Step 2 (OTP Verify + Firebase Login) Latency: ${(endTime - startTime).toFixed(2)} ms`, {duration: 8000}
-        );
+    if (res.success) {
+      toast.success(`✅ OTP verification took ${otpTime} ms`, { duration: 8000 });
 
-        toast.success("✅ Login successful!");
-        navigate("/"); // Redirect after OTP verified
-      } else {
-        toast.error("❌ " + res.message);
-      }
-    } catch (err) {
-      console.error(err);
-      toast.error("OTP verification failed");
-    } finally {
-      setLoading(false);
+      // --- Measure Firebase login only ---
+      const loginStart = performance.now();
+      await loginUser(email, password);
+      const loginEnd = performance.now();
+      const loginTime = (loginEnd - loginStart).toFixed(2);
+
+      toast.success(`🔐 Firebase login after OTP took ${loginTime} ms`, { duration: 8000 });
+
+      toast.success("🎉 Login successful!");
+      navigate("/");
+    } else {
+      toast.error("❌ " + res.message);
     }
-  };
+  } catch (err) {
+    console.error(err);
+    toast.error("OTP verification failed");
+  } finally {
+    setLoading(false);
+  }
+};
+
 
   return (
     <div className="min-h-screen flex items-center justify-center bg-gray-100">
