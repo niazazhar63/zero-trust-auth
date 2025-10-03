@@ -25,7 +25,7 @@ export default function LoginPage() {
 
       const endTime = performance.now(); // End time for step 1
       toast.success(
-        `Step 1 (Login+Send OTP) Latency: ${(endTime - startTime).toFixed(2)} ms`, {duration: 8000}
+        `Step 1 (Login+Send OTP) Latency: ${(endTime - startTime).toFixed(2)} ms`, {duration: 15000}
       );
 
       setStep("otp");
@@ -51,7 +51,7 @@ const handleOtpVerify = async (e) => {
     const otpTime = (otpEnd - otpStart).toFixed(2);
 
     if (res.success) {
-      toast.success(`✅ OTP verification took ${otpTime} ms`, { duration: 8000 });
+      toast.success(`✅ OTP verification took ${otpTime} ms`, { duration: 15000 });
 
       // --- Measure Firebase login only ---
       const loginStart = performance.now();
@@ -59,7 +59,7 @@ const handleOtpVerify = async (e) => {
       const loginEnd = performance.now();
       const loginTime = (loginEnd - loginStart).toFixed(2);
 
-      toast.success(`🔐 Firebase login after OTP took ${loginTime} ms`, { duration: 8000 });
+      toast.success(`🔐 Firebase login after OTP took ${loginTime} ms`, { duration: 15000 });
 
       toast.success("🎉 Login successful!");
       navigate("/");
