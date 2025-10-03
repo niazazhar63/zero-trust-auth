@@ -51,7 +51,7 @@ const handleOtpVerify = async (e) => {
     const otpTime = (otpEnd - otpStart).toFixed(2);
 
     if (res.success) {
-      toast.success(`✅ OTP verification took ${otpTime} ms`, { duration: 15000 });
+      toast.success(`✅ OTP verification took ${otpTime} ms`, { duration: 20000 });
 
       // --- Measure Firebase login only ---
       const loginStart = performance.now();
@@ -59,7 +59,7 @@ const handleOtpVerify = async (e) => {
       const loginEnd = performance.now();
       const loginTime = (loginEnd - loginStart).toFixed(2);
 
-      toast.success(`🔐 Firebase login after OTP took ${loginTime} ms`, { duration: 15000 });
+      toast.success(`🔐 Firebase login after OTP took ${loginTime} ms`, { duration: 20000 });
 
       toast.success("🎉 Login successful!");
       navigate("/");
