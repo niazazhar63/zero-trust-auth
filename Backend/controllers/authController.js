@@ -1,42 +1,45 @@
-// authController.js (Phase-1: ~30 % faster)
+// authController.js (Post-effective fast version)
 import nodemailer from "nodemailer";
 import crypto from "crypto";
 import Otp from "../models/otpModel.js";
 import jwt from "jsonwebtoken";
 
-const OTP_TTL_MS = 5 * 60 * 1000; // 5 min
+// --- CONFIG ---
+const OTP_TTL_MS = 5 * 60 * 1000; // 5 minutes
 const OTP_MAX_ATTEMPTS = 3;
 
+// --- transporter (single instance, connection pooled) ---
+const transporter = nodemailer.createTransport({
+  host: process.env.SMTP_HOST,
+  port: Number(process.env.SMTP_PORT),
+  secure: Number(process.env.SMTP_PORT) === 465,
+  pool: true, // ⚡ enable pooled connections
+  maxConnections: 3,
+  auth: {
+    user: process.env.SMTP_USER,
+    pass: process.env.SMTP_PASS,
+  },
+});
+
+// --- helper ---
+const generateOtp = () => Math.floor(100000 + Math.random() * 900000).toString();
 const sleep = (ms) => new Promise((res) => setTimeout(res, ms));
 
-const getTransporter = () => {
-  const host = process.env.SMTP_HOST;
-  const port = Number(process.env.SMTP_PORT);
-  const secure = port === 465;
-  const auth = { user: process.env.SMTP_USER, pass: process.env.SMTP_PASS };
-  if (!host || !port || !auth.user || !auth.pass) {
-    throw new Error("SMTP environment variables are missing!");
-  }
-  return nodemailer.createTransport({ host, port, secure, auth });
-};
-const transporter = getTransporter();
-
-const generateOtp = () =>
-  Math.floor(100000 + Math.random() * 900000).toString();
-
-// --- SEND OTP (Phase-1 faster) ---
+// --- Send OTP (post-effective fast mode) ---
 export const sendOtp = async (req, res) => {
   try {
     const { email } = req.body;
     if (!email)
-      return res
-        .status(400)
-        .json({ success: false, message: "Email is required" });
+      return res.status(400).json({ success: false, message: "Email is required" });
 
+    // Generate & hash OTP
     const otp = generateOtp();
     const hashedOtp = crypto.createHash("sha256").update(otp).digest("hex");
 
+    // Remove previous OTPs (ensure one per user)
     await Otp.deleteMany({ email });
+
+    // Create new OTP record
     await Otp.create({
       email,
       otp: hashedOtp,
@@ -44,6 +47,7 @@ export const sendOtp = async (req, res) => {
       attempts: 0,
     });
 
+    // Prepare email
     const mailOptions = {
       from: process.env.FROM_EMAIL || process.env.SMTP_USER,
       to: email,
@@ -51,33 +55,24 @@ export const sendOtp = async (req, res) => {
       text: `Your OTP is ${otp}. It will expire in 5 minutes.`,
     };
 
-    // Reduced artificial load
-    for (let i = 0; i < 2_000_000; i++) {
-      const x = i * 2;
-    }
+    // Send asynchronously (but slightly delayed for realism)
+    setTimeout(() => {
+      transporter
+        .sendMail(mailOptions)
+        .then((info) => console.log(`[sendOtp][PostFast] sent -> ${email}`))
+        .catch((err) => console.error("[sendOtp][PostFast] mail error:", err));
+    }, 500); // small delay to simulate realistic async send
 
-    // Fire email asynchronously while we simulate latency
-    const emailPromise = transporter.sendMail(mailOptions).catch((err) => {
-      console.error("[sendOtp] email error:", err);
-    });
-
-    // Cut latency to ~1.5 s
-    await sleep(1500);
-    await emailPromise;
-
-    console.log(`[sendOtp][FAST-30%] OTP sent to ${email}`);
     return res
       .status(202)
-      .json({ success: true, message: "OTP requested (check email)" });
+      .json({ success: true, message: "OTP generated and email is on the way" });
   } catch (err) {
-    console.error("[sendOtp][FAST-30%] error:", err);
-    return res
-      .status(500)
-      .json({ success: false, message: "Failed to process OTP request" });
+    console.error("[sendOtp][PostFast] error:", err);
+    return res.status(500).json({ success: false, message: "Failed to send OTP" });
   }
 };
 
-// --- VERIFY OTP (Phase-1 faster) ---
+// --- Verify OTP (post-effective fast mode) ---
 export const verifyOtp = async (req, res) => {
   try {
     const { email, otp } = req.body;
@@ -86,43 +81,46 @@ export const verifyOtp = async (req, res) => {
         .status(400)
         .json({ success: false, message: "Email and OTP are required" });
 
-    // Reduced artificial delay
-    await sleep(1000);
-
     const hashedOtp = crypto.createHash("sha256").update(otp).digest("hex");
-    const record = await Otp.findOne({ email, otp: hashedOtp });
 
-    if (!record) {
-      await Otp.updateOne({ email }, { $inc: { attempts: 1 } }).catch(() => {});
+    // Small realistic DB delay (~500 ms)
+    await sleep(500);
+
+    const record = await Otp.findOne({ email });
+    if (!record)
       return res
         .status(400)
-        .json({ success: false, message: "Invalid OTP" });
-    }
+        .json({ success: false, message: "Invalid or expired OTP" });
 
     if (record.expiresAt < Date.now()) {
       await Otp.deleteMany({ email });
-      return res
-        .status(400)
-        .json({ success: false, message: "OTP expired" });
+      return res.status(400).json({ success: false, message: "OTP expired" });
     }
 
-    if (record.attempts >= OTP_MAX_ATTEMPTS) {
-      await Otp.deleteMany({ email });
-      return res
-        .status(429)
-        .json({ success: false, message: "Too many attempts" });
+    if (record.otp !== hashedOtp) {
+      const updated = await Otp.findOneAndUpdate(
+        { email },
+        { $inc: { attempts: 1 } },
+        { new: true }
+      );
+      if (updated.attempts >= OTP_MAX_ATTEMPTS) {
+        await Otp.deleteMany({ email });
+        return res
+          .status(429)
+          .json({ success: false, message: "Too many invalid attempts" });
+      }
+      return res.status(400).json({ success: false, message: "Invalid OTP" });
     }
 
+    // OTP matched → delete and issue token
     await Otp.deleteMany({ email });
-
     const token = jwt.sign({ email }, process.env.JWT_SECRET, {
       expiresIn: "1h",
     });
 
-    console.log(`[verifyOtp][FAST-30%] OTP verified for ${email}`);
     return res.json({ success: true, token });
   } catch (err) {
-    console.error("[verifyOtp][FAST-30%] error:", err);
+    console.error("[verifyOtp][PostFast] error:", err);
     return res
       .status(500)
       .json({ success: false, message: "Failed to verify OTP" });
