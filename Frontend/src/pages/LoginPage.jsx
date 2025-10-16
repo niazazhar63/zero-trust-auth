@@ -2,6 +2,10 @@ import { useContext, useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import { AuthContext } from "../context/AuthProvider";
 import toast from "react-hot-toast";
+import axios from "axios";
+import { collectRiskData } from "../utils/collectRiskData";
+
+const API_URL = import.meta.env.VITE_BACKEND_URL;
 
 export default function LoginPage() {
   const { loginUser, sendOtp, verifyOtp } = useContext(AuthContext);
@@ -10,26 +14,18 @@ export default function LoginPage() {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [otp, setOtp] = useState("");
-  const [step, setStep] = useState("login"); // "login" or "otp"
+  const [step, setStep] = useState("login");
   const [loading, setLoading] = useState(false);
 
-  // Step 1: Firebase login + send OTP
+  // Step 1: Login credentials
   const handleSubmit = async (e) => {
     e.preventDefault();
     setLoading(true);
-
-    const startTime = performance.now(); // Start time for step 1
     try {
-      await loginUser(email, password); // Only credential check
-      await sendOtp(email); // Send OTP from backend
-
-      const endTime = performance.now(); // End time for step 1
-      toast.success(
-        `Step 1 (Login+Send OTP) Latency: ${(endTime - startTime).toFixed(2)} ms`, {duration: 15000}
-      );
-
-      setStep("otp");
+      await loginUser(email, password);
+      await sendOtp(email);
       toast.success("OTP sent to your email!");
+      setStep("otp");
     } catch (err) {
       console.error(err);
       toast.error("Login failed: " + err.message);
@@ -38,42 +34,40 @@ export default function LoginPage() {
     }
   };
 
-  // Step 2: Verify OTP + then Login
-const handleOtpVerify = async (e) => {
-  e.preventDefault();
-  setLoading(true);
+  // Step 2: Verify OTP & assess risk
+  const handleOtpVerify = async (e) => {
+    e.preventDefault();
+    setLoading(true);
+    try {
+      const otpRes = await verifyOtp(email, otp);
+      if (!otpRes.success) {
+        toast.error("Invalid OTP");
+        return;
+      }
 
-  try {
-    // --- Measure OTP verification only ---
-    const otpStart = performance.now();
-    const res = await verifyOtp(email, otp);
-    const otpEnd = performance.now();
-    const otpTime = (otpEnd - otpStart).toFixed(2);
+      const riskData = await collectRiskData();
+      const { data: riskRes } = await axios.post(`${API_URL}/api/risk/assess`, {
+        email,
+        riskData,
+      });
 
-    if (res.success) {
-      toast.success(`✅ OTP verification took ${otpTime} ms`, { duration: 20000 });
-
-      // --- Measure Firebase login only ---
-      const loginStart = performance.now();
-      await loginUser(email, password);
-      const loginEnd = performance.now();
-      const loginTime = (loginEnd - loginStart).toFixed(2);
-
-      toast.success(`🔐 Firebase login after OTP took ${loginTime} ms`, { duration: 20000 });
-
-      toast.success("🎉 Login successful!");
-      navigate("/");
-    } else {
-      toast.error("❌ " + res.message);
+      if (riskRes.riskLevel === "high" || riskRes.riskLevel === "medium") {
+        toast.error(
+          `⚠️ ${riskRes.riskLevel.toUpperCase()} RISK detected — please verify again.`
+        );
+        await sendOtp(email);
+        setStep("otp");
+      } else {
+        toast.success("🎉 Login successful — Low risk detected!");
+        navigate("/");
+      }
+    } catch (err) {
+      console.error(err);
+      toast.error("Error during verification");
+    } finally {
+      setLoading(false);
     }
-  } catch (err) {
-    console.error(err);
-    toast.error("OTP verification failed");
-  } finally {
-    setLoading(false);
-  }
-};
-
+  };
 
   return (
     <div className="min-h-screen flex items-center justify-center bg-gray-100">
@@ -82,67 +76,57 @@ const handleOtpVerify = async (e) => {
           <>
             <h2 className="text-2xl font-bold text-center mb-6">Login</h2>
             <form onSubmit={handleSubmit} className="space-y-4">
-              <div>
-                <label className="block text-sm font-medium text-gray-700">
-                  Email
-                </label>
-                <input
-                  type="email"
-                  placeholder="Enter your email"
-                  value={email}
-                  onChange={(e) => setEmail(e.target.value)}
-                  required
-                  className="w-full px-4 py-2 border rounded-lg"
-                />
-              </div>
-              <div>
-                <label className="block text-sm font-medium text-gray-700">
-                  Password
-                </label>
-                <input
-                  type="password"
-                  placeholder="Enter your password"
-                  value={password}
-                  onChange={(e) => setPassword(e.target.value)}
-                  required
-                  className="w-full px-4 py-2 border rounded-lg"
-                />
-              </div>
+              <input
+                type="email"
+                placeholder="Email"
+                className="w-full border p-2 rounded"
+                value={email}
+                onChange={(e) => setEmail(e.target.value)}
+                required
+              />
+              <input
+                type="password"
+                placeholder="Password"
+                className="w-full border p-2 rounded"
+                value={password}
+                onChange={(e) => setPassword(e.target.value)}
+                required
+              />
               <button
                 type="submit"
                 disabled={loading}
-                className="w-full bg-blue-600 text-white py-2 rounded-lg"
+                className="w-full bg-blue-600 text-white py-2 rounded"
               >
-                {loading ? "Signing In..." : "Sign In"}
+                {loading ? "Signing in..." : "Sign In"}
               </button>
-            </form>
 
-            <p className="text-sm text-gray-600 text-center mt-4">
-              Don’t have an account?{" "}
-              <Link to="/request" className="text-blue-600 hover:underline">
-                Request To Create an Account
+              <div className="text-center text-sm mt-3">
+              <Link
+                to="/request"
+                className="text-blue-600 hover:underline font-medium"
+              >
+                Don’t have an account? Request here
               </Link>
-            </p>
+            </div>
+
+            </form>
           </>
         ) : (
           <>
             <h2 className="text-2xl font-bold text-center mb-6">Verify OTP</h2>
             <form onSubmit={handleOtpVerify} className="space-y-4">
-              <label className="block text-sm font-medium text-gray-700">
-                Enter OTP sent to {email}
-              </label>
               <input
                 type="text"
                 placeholder="Enter OTP"
+                className="w-full border p-2 rounded"
                 value={otp}
                 onChange={(e) => setOtp(e.target.value)}
                 required
-                className="w-full px-4 py-2 border rounded-lg"
               />
               <button
                 type="submit"
                 disabled={loading}
-                className="w-full bg-green-600 text-white py-2 rounded-lg"
+                className="w-full bg-green-600 text-white py-2 rounded"
               >
                 {loading ? "Verifying..." : "Verify OTP"}
               </button>
