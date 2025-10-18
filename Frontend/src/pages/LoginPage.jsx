@@ -36,7 +36,6 @@ export default function LoginPage() {
       const riskLevel = riskRes?.riskLevel || "low";
 
       if (riskLevel === "low") {
-        toast.success("✅ Low Risk — Logged in successfully!");
         navigate("/");
       } else if (riskLevel === "medium") {
         toast("⚠️ Medium Risk — OTP verification required.");
