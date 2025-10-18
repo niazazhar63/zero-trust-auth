@@ -17,15 +17,34 @@ export default function LoginPage() {
   const [step, setStep] = useState("login");
   const [loading, setLoading] = useState(false);
 
-  // Step 1: Login credentials
+  // Step 1: Handle login
   const handleSubmit = async (e) => {
     e.preventDefault();
     setLoading(true);
+
     try {
+      // Try login (Firebase auth)
       await loginUser(email, password);
-      await sendOtp(email);
-      toast.success("OTP sent to your email!");
-      setStep("otp");
+
+      // Collect risk data and send to backend
+      const riskData = await collectRiskData();
+      const { data: riskRes } = await axios.post(`${API_URL}/api/risk/assess`, {
+        email,
+        riskData,
+      });
+
+      const riskLevel = riskRes?.riskLevel || "low";
+
+      if (riskLevel === "low") {
+        toast.success("✅ Low Risk — Logged in successfully!");
+        navigate("/");
+      } else if (riskLevel === "medium") {
+        toast("⚠️ Medium Risk — OTP verification required.");
+        await sendOtp(email);
+        setStep("otp");
+      } else if (riskLevel === "high") {
+        toast.error("🚫 High Risk detected. Login blocked for 15 minutes.");
+      }
     } catch (err) {
       console.error(err);
       toast.error("Login failed: " + err.message);
@@ -34,10 +53,11 @@ export default function LoginPage() {
     }
   };
 
-  // Step 2: Verify OTP & assess risk
+  // Step 2: Handle OTP verification (only for medium risk)
   const handleOtpVerify = async (e) => {
     e.preventDefault();
     setLoading(true);
+
     try {
       const otpRes = await verifyOtp(email, otp);
       if (!otpRes.success) {
@@ -45,25 +65,11 @@ export default function LoginPage() {
         return;
       }
 
-      const riskData = await collectRiskData();
-      const { data: riskRes } = await axios.post(`${API_URL}/api/risk/assess`, {
-        email,
-        riskData,
-      });
-
-      if (riskRes.riskLevel === "high" || riskRes.riskLevel === "medium") {
-        toast.error(
-          `⚠️ ${riskRes.riskLevel.toUpperCase()} RISK detected — please verify again.`
-        );
-        await sendOtp(email);
-        setStep("otp");
-      } else {
-        toast.success("🎉 Login successful — Low risk detected!");
-        navigate("/");
-      }
+      toast.success("🎉 OTP verified! Login successful.");
+      navigate("/");
     } catch (err) {
       console.error(err);
-      toast.error("Error during verification");
+      toast.error("Error verifying OTP");
     } finally {
       setLoading(false);
     }
@@ -101,14 +107,13 @@ export default function LoginPage() {
               </button>
 
               <div className="text-center text-sm mt-3">
-              <Link
-                to="/request"
-                className="text-blue-600 hover:underline font-medium"
-              >
-                Don’t have an account? Request here
-              </Link>
-            </div>
-
+                <Link
+                  to="/request"
+                  className="text-blue-600 hover:underline font-medium"
+                >
+                  Don’t have an account? Request here
+                </Link>
+              </div>
             </form>
           </>
         ) : (
