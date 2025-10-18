@@ -1,6 +1,6 @@
-import { createContext, useState } from "react";
+import { createContext, useState, useEffect } from "react";
 import app from "../firebase/firebase.config";
-import { getAuth, signInWithEmailAndPassword, signOut } from "firebase/auth";
+import { getAuth, signInWithEmailAndPassword, signOut, onAuthStateChanged } from "firebase/auth";
 import axios from "axios";
 
 const auth = getAuth(app);
@@ -11,7 +11,7 @@ export const AuthContext = createContext(null);
 
 const AuthProvider = ({ children }) => {
   const [user, setUser] = useState(null); // Only set after OTP verify
-  const [loading, setLoading] = useState(false);
+  const [loading, setLoading] = useState(true); // start as true while checking persistence
 
   // 1️⃣ Firebase credential check (login)
   const loginUser = (email, password) => {
@@ -55,6 +55,26 @@ const AuthProvider = ({ children }) => {
     localStorage.removeItem("token");
     return signOut(auth);
   };
+
+  // 5️⃣ Persist login on refresh
+  useEffect(() => {
+    const token = localStorage.getItem("token");
+    if (token) {
+      // Optional: you can decode token or call backend to verify
+      const savedEmail = JSON.parse(atob(token.split(".")[1])).email; // if JWT contains email
+      setUser({ email: savedEmail });
+    }
+
+    // Optional: keep Firebase state synced
+    const unsubscribe = onAuthStateChanged(auth, (firebaseUser) => {
+      if (firebaseUser) {
+        setUser((prev) => prev || { email: firebaseUser.email });
+      }
+      setLoading(false);
+    });
+
+    return () => unsubscribe();
+  }, []);
 
   const authInfo = {
     user,
