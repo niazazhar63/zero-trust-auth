@@ -38,7 +38,7 @@ function App() {
                 <Route path="/allRequests" element={<AllRequests token={token} />}></Route>
                 <Route path="/addEmail" element={<Add token={token} />}></Route>
                 <Route path="/allUsers" element={<AllAccount  token={token}/>}></Route>
-                <Route path="/analytics" element={<Analytics  token={token}/>}></Route>
+                <Route path="/analytics" element={<Analytics/>}></Route>
               </Routes>
             </div>
           </div>
