@@ -7,12 +7,12 @@ import RequestRouter from "./routes/requestRoutes.js";
 import { testProvision } from "./controllers/scimControllers.js";
 import authRouter from "./routes/authRoutes.js";
 import RiskRouter from "./routes/riskRoutes.js";
+import adminAnalyticsRoutes from "./routes/adminAnalyticsRoutes.js";
 
 const app = express();
 
 app.use(cors());
 app.use(express.json());
-
 await connectDB();
 
 app.get("/", (req, res) => {
@@ -23,6 +23,7 @@ app.use("/api/admin", adminRouter);
 app.use("/api/request", RequestRouter);
 app.use("/api/auth", authRouter);
 app.use("/api/risk", RiskRouter)
+app.use("/api/admin/analytics", adminAnalyticsRoutes)
 // app.use("/api", testProvision)
 
 const PORT = process.env.PORT || 3000;
