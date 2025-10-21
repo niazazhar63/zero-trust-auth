@@ -8,6 +8,7 @@ import AllAccount from "./pages/AllAccount";
 import { useEffect, useState } from "react";
 import Login from "./components/Login";
 import { Toaster } from "react-hot-toast";
+import Analytics from "./pages/Analytics";
 
 
 
@@ -37,6 +38,7 @@ function App() {
                 <Route path="/allRequests" element={<AllRequests token={token} />}></Route>
                 <Route path="/addEmail" element={<Add token={token} />}></Route>
                 <Route path="/allUsers" element={<AllAccount  token={token}/>}></Route>
+                <Route path="/analytics" element={<Analytics  token={token}/>}></Route>
               </Routes>
             </div>
           </div>
