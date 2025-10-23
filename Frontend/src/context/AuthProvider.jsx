@@ -17,10 +17,23 @@ const API_URL = import.meta.env.VITE_BACKEND_URL;
 export const AuthContext = createContext(null);
 
 const AuthProvider = ({ children }) => {
-  const [user, setUser] = useState(null); // Only set after OTP verify
-  const [loading, setLoading] = useState(true); // start as true while checking persistence
+  const [user, setUser] = useState(null);
+  const [loading, setLoading] = useState(true);
 
-  // 2️⃣ Send OTP
+  // 🔹 Fetch role from backend
+  const fetchUserRole = async (email) => {
+    try {
+      const res = await axios.get(`${API_URL}/api/auth/user/${email}`);
+      if (res.data?.role) {
+        return res.data.role;
+      }
+      return null // default fallback
+    } catch (err) {
+      console.error("Error fetching user role:", err);
+      return null
+    }
+  };
+
   const sendOtp = async (email) => {
     try {
       setLoading(true);
@@ -30,21 +43,17 @@ const AuthProvider = ({ children }) => {
       setLoading(false);
     }
   };
-  // 1️⃣ Firebase credential check (login)
+
   const loginUser = async (email, password) => {
     setLoading(true);
     try {
-      // Step 1: Firebase login to verify credentials
       const userCred = await signInWithEmailAndPassword(auth, email, password);
-
-      // Step 2: Collect risk data and send to backend
       const riskData = await collectRiskData();
       const { data: riskRes } = await axios.post(`${API_URL}/api/risk/assess`, {
         email,
         riskData,
       });
 
-      // Step 3: Handle based on risk level
       if (riskRes.riskLevel === "high") {
         toast.error("🚫 High risk detected! Login blocked for 15 minutes.");
         return { success: false, blocked: true };
@@ -53,9 +62,9 @@ const AuthProvider = ({ children }) => {
         await sendOtp(email);
         return { success: false, otpRequired: true };
       } else {
-        // low risk → allow login directly
+        const role = await fetchUserRole(email); // 🔹 Fetch role
         localStorage.setItem("token", userCred.user.accessToken);
-        setUser({ email });
+        setUser({ email, role }); // 🔹 Save role with user
         toast.success("✅ Low risk: Logged in successfully!");
         return { success: true };
       }
@@ -68,7 +77,6 @@ const AuthProvider = ({ children }) => {
     }
   };
 
-  // 3️⃣ Verify OTP
   const verifyOtp = async (email, otp) => {
     try {
       setLoading(true);
@@ -77,8 +85,9 @@ const AuthProvider = ({ children }) => {
         otp,
       });
       if (res.data.success) {
+        const role = await fetchUserRole(email); // 🔹 Fetch role after OTP success
         localStorage.setItem("token", res.data.token);
-        setUser({ email }); // ✅ Only after OTP verification
+        setUser({ email, role });
       }
       return res.data;
     } finally {
@@ -86,26 +95,32 @@ const AuthProvider = ({ children }) => {
     }
   };
 
-  // 4️⃣ Logout
   const logOut = () => {
     setUser(null);
     localStorage.removeItem("token");
     return signOut(auth);
   };
 
-  // 5️⃣ Persist login on refresh
   useEffect(() => {
     const token = localStorage.getItem("token");
     if (token) {
-      // Optional: you can decode token or call backend to verify
-      const savedEmail = JSON.parse(atob(token.split(".")[1])).email; // if JWT contains email
-      setUser({ email: savedEmail });
+      try {
+        const decoded = JSON.parse(atob(token.split(".")[1]));
+        if (decoded?.email) {
+          fetchUserRole(decoded.email).then((role) => {
+            setUser({ email: decoded.email, role });
+          });
+        }
+      } catch (e) {
+        console.error("Token decode failed:", e);
+      }
     }
 
-    // Optional: keep Firebase state synced
     const unsubscribe = onAuthStateChanged(auth, (firebaseUser) => {
       if (firebaseUser) {
-        setUser((prev) => prev || { email: firebaseUser.email });
+        fetchUserRole(firebaseUser.email).then((role) => {
+          setUser({ email: firebaseUser.email, role });
+        });
       }
       setLoading(false);
     });

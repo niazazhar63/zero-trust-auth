@@ -4,6 +4,7 @@ import Otp from "../models/otpModel.js";
 import Risk from "../models/riskModel.js";
 import jwt from "jsonwebtoken";
 import { calculateRiskScore } from "../utils/riskEngine.js";
+import Request from "../models/requestModel.js";
 
 const OTP_TTL_MS = 5 * 60 * 1000;
 const OTP_MAX_ATTEMPTS = 3;
@@ -192,3 +193,33 @@ export const verifyOtp = async (req, res) => {
     return res.status(500).json({ success: false, message: "Failed to verify OTP" });
   }
 };
+
+/**
+ * GET USER DETAILS BY EMAIL
+ */
+export const getUserByEmail = async (req, res) => {
+  try {
+    const { email } = req.params;
+
+    if (!email) {
+      return res.status(400).json({ success: false, message: "Email is required" });
+    }
+
+    const user = await Request.findOne({ email }).select("name email role");
+
+    if (!user) {
+      return res.status(404).json({ success: false, message: "User not found" });
+    }
+
+    res.status(200).json({
+      success: true,
+      name: user.name,
+      email: user.email,
+      role: user.role,
+    });
+  } catch (error) {
+    console.error("Error fetching user by email:", error);
+    res.status(500).json({ success: false, message: "Internal server error" });
+  }
+};
+

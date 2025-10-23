@@ -8,7 +8,6 @@ import { testProvision } from "./controllers/scimControllers.js";
 import authRouter from "./routes/authRoutes.js";
 import RiskRouter from "./routes/riskRoutes.js";
 import adminAnalyticsRoutes from "./routes/adminAnalyticsRoutes.js";
-
 const app = express();
 
 app.use(cors());
