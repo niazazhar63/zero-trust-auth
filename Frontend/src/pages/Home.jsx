@@ -18,6 +18,14 @@ const Home = () => {
             Dive in to see how risk-based access, multi-level authentication, 
             and intelligent security checks come together in a real-world application.
           </p>
+
+           <p className="my-6 sm:my-8 max-w-2xl m-auto max-sm:text-xs text-gray-500">
+            This thesis project demonstrates a dynamic Zero Trust Authentication system. 
+            It continuously evaluates every login attempt based on risk factors like device, location, and behavior. 
+            For low-risk users, access is seamless; for medium-risk attempts, an OTP verification is triggered; 
+            and high-risk attempts are temporarily blocked to prevent unauthorized access. 
+            The system reacts in real-time, ensuring security while adapting to each user’s behavior.
+          </p>
         </div>
         <img
           src={assets.gradientBackground}
