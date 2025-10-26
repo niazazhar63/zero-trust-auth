@@ -9,28 +9,26 @@ import {
 import axios from "axios";
 import { collectRiskData } from "../utils/collectRiskData";
 import toast from "react-hot-toast";
+import { useNavigate } from "react-router-dom"; // 🔹 Needed for redirect
 
 const auth = getAuth(app);
 const API_URL = import.meta.env.VITE_BACKEND_URL;
 
-// eslint-disable-next-line react-refresh/only-export-components
 export const AuthContext = createContext(null);
 
 const AuthProvider = ({ children }) => {
   const [user, setUser] = useState(null);
   const [loading, setLoading] = useState(true);
+  const [sessionInfo, setSessionInfo] = useState(null); // 🔹 store login session info
+  const navigate = useNavigate(); // 🔹 for redirect
 
-  // 🔹 Fetch role from backend
   const fetchUserRole = async (email) => {
     try {
       const res = await axios.get(`${API_URL}/api/auth/user/${email}`);
-      if (res.data?.role) {
-        return res.data.role;
-      }
-      return null // default fallback
+      return res.data?.role || null;
     } catch (err) {
       console.error("Error fetching user role:", err);
-      return null
+      return null;
     }
   };
 
@@ -62,9 +60,11 @@ const AuthProvider = ({ children }) => {
         await sendOtp(email);
         return { success: false, otpRequired: true };
       } else {
-        const role = await fetchUserRole(email); // 🔹 Fetch role
+        const role = await fetchUserRole(email);
         localStorage.setItem("token", userCred.user.accessToken);
-        setUser({ email, role }); // 🔹 Save role with user
+        setUser({ email, role });
+        setSessionInfo(riskData); // 🔹 save session info for checking
+        localStorage.setItem("sessionInfo", JSON.stringify(riskData)); // 🔹 persist
         toast.success("✅ Low risk: Logged in successfully!");
         return { success: true };
       }
@@ -80,14 +80,14 @@ const AuthProvider = ({ children }) => {
   const verifyOtp = async (email, otp) => {
     try {
       setLoading(true);
-      const res = await axios.post(`${API_URL}/api/auth/verify-otp`, {
-        email,
-        otp,
-      });
+      const res = await axios.post(`${API_URL}/api/auth/verify-otp`, { email, otp });
       if (res.data.success) {
-        const role = await fetchUserRole(email); // 🔹 Fetch role after OTP success
+        const role = await fetchUserRole(email);
         localStorage.setItem("token", res.data.token);
         setUser({ email, role });
+        const riskData = await collectRiskData();
+        setSessionInfo(riskData);
+        localStorage.setItem("sessionInfo", JSON.stringify(riskData));
       }
       return res.data;
     } finally {
@@ -97,9 +97,36 @@ const AuthProvider = ({ children }) => {
 
   const logOut = () => {
     setUser(null);
+    setSessionInfo(null);
     localStorage.removeItem("token");
+    localStorage.removeItem("sessionInfo");
+    navigate("/login"); // 🔹 redirect
     return signOut(auth);
   };
+
+  // 🔹 Periodic session check
+  useEffect(() => {
+    const interval = setInterval(async () => {
+      if (!user) return; // no user logged in
+      try {
+        const currentData = await collectRiskData();
+        const savedData = JSON.parse(localStorage.getItem("sessionInfo"));
+        if (
+          savedData &&
+          (savedData.ip !== currentData.ip ||
+           savedData.device !== currentData.device ||
+           savedData.location !== currentData.location)
+        ) {
+          toast.error("⚠️ Session changed! You have been logged out.");
+          logOut();
+        }
+      } catch (err) {
+        console.error("Session check failed:", err);
+      }
+    }, 30000); // 🔹 check every 30 seconds
+
+    return () => clearInterval(interval);
+  }, [user]);
 
   useEffect(() => {
     const token = localStorage.getItem("token");
@@ -137,9 +164,7 @@ const AuthProvider = ({ children }) => {
     logOut,
   };
 
-  return (
-    <AuthContext.Provider value={authInfo}>{children}</AuthContext.Provider>
-  );
+  return <AuthContext.Provider value={authInfo}>{children}</AuthContext.Provider>;
 };
 
 export default AuthProvider;

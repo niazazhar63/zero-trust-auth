@@ -17,6 +17,8 @@ export default function LoginPage() {
   const [step, setStep] = useState("login");
   const [loading, setLoading] = useState(false);
 
+
+
   // Step 1: Handle login
   const handleSubmit = async (e) => {
     e.preventDefault();
@@ -28,11 +30,11 @@ export default function LoginPage() {
 
       // Collect risk data and send to backend
       const riskData = await collectRiskData();
+      console.log(riskData)
       const { data: riskRes } = await axios.post(`${API_URL}/api/risk/assess`, {
         email,
         riskData,
       });
-
       const riskLevel = riskRes?.riskLevel || "low";
 
       if (riskLevel === "low") {

@@ -32,3 +32,4 @@ export const collectRiskData = async () => {
     return { error: true };
   }
 };
+
