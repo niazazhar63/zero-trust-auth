@@ -123,7 +123,7 @@ const AuthProvider = ({ children }) => {
       } catch (err) {
         console.error("Session check failed:", err);
       }
-    }, 5000); // 🔹 check every 30 seconds
+    }, 5000); //
 
     return () => clearInterval(interval);
   }, [user]);

@@ -19,6 +19,7 @@
     "express": "^5.1.0",
     "firebase-admin": "^13.5.0",
     "geoip-lite": "^1.4.10",
+    "ioredis": "^5.8.2",
     "jsonwebtoken": "^9.0.2",
     "mongodb": "^6.19.0",
     "mongoose": "^8.18.0",
