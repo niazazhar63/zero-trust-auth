@@ -1,4 +1,3 @@
-// models/riskModel.js
 import mongoose from "mongoose";
 
 const riskSchema = new mongoose.Schema(
@@ -21,6 +20,7 @@ const riskSchema = new mongoose.Schema(
     riskScore: { type: Number, default: 0 },
     riskLevel: { type: String, enum: ["low", "medium", "high"], default: "low" },
     reason: String,
+    isFirstLogin: { type: Boolean, default: true }, // NEW: track first login
   },
   { timestamps: true }
 );

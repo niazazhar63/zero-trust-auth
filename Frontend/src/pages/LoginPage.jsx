@@ -2,10 +2,7 @@ import { useContext, useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import { AuthContext } from "../context/AuthProvider";
 import toast from "react-hot-toast";
-import axios from "axios";
 import { collectRiskData } from "../utils/collectRiskData";
-
-const API_URL = import.meta.env.VITE_BACKEND_URL;
 
 export default function LoginPage() {
   const { loginUser, sendOtp, verifyOtp } = useContext(AuthContext);
@@ -17,50 +14,47 @@ export default function LoginPage() {
   const [step, setStep] = useState("login");
   const [loading, setLoading] = useState(false);
 
-
-
   // Step 1: Handle login
   const handleSubmit = async (e) => {
     e.preventDefault();
     setLoading(true);
 
     try {
-      // Try login (Firebase auth)
+      // 1️⃣ Firebase login or your auth logic
       await loginUser(email, password);
 
-      // Collect risk data and send to backend
+      // 2️⃣ Collect device & risk info
       const riskData = await collectRiskData();
-      console.log(riskData)
-      const { data: riskRes } = await axios.post(`${API_URL}/api/risk/assess`, {
-        email,
-        riskData,
-      });
-      const riskLevel = riskRes?.riskLevel || "low";
 
-      if (riskLevel === "low") {
+      // 3️⃣ Send OTP or check if OTP needed
+      // Make sure sendOtp returns the backend response (not axios wrapper with data destructure)
+      const riskRes = await sendOtp(email, riskData);
+
+      if (riskRes.skipOtp) {
+        // Low-risk returning user → skip OTP
         navigate("/");
-      } else if (riskLevel === "medium") {
-        toast("⚠️ Medium Risk — OTP verification required.");
-        await sendOtp(email);
+      } else {
+        // OTP required (first login or medium risk)
+        toast("⚠️ OTP required for first login or medium risk.");
         setStep("otp");
-      } else if (riskLevel === "high") {
-        toast.error("🚫 High Risk detected. Login blocked for 15 minutes.");
       }
+
     } catch (err) {
       console.error(err);
-      toast.error("Login failed: " + err.message);
+      toast.error("Login failed: " + (err?.message || "Unknown error"));
     } finally {
       setLoading(false);
     }
   };
 
-  // Step 2: Handle OTP verification (only for medium risk)
+  // Step 2: Handle OTP verification
   const handleOtpVerify = async (e) => {
     e.preventDefault();
     setLoading(true);
 
     try {
       const otpRes = await verifyOtp(email, otp);
+
       if (!otpRes.success) {
         toast.error("Invalid OTP");
         return;
@@ -68,6 +62,7 @@ export default function LoginPage() {
 
       toast.success("🎉 OTP verified! Login successful.");
       navigate("/");
+
     } catch (err) {
       console.error(err);
       toast.error("Error verifying OTP");
